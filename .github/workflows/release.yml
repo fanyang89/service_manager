@@ -253,5 +253,6 @@ jobs:
           gh release create "$RELEASE_TAG" dist/* \
             --generate-notes \
             --notes "Desktop builds are unsigned. Verify downloads with SHA256SUMS. The Web archive contains frontend files only; desktop and Headless archives already include the Web UI." \
+            --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Service Manager $RELEASE_TAG"
