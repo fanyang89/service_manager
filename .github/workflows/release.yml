@@ -1,0 +1,257 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag matching the pubspec version
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: 3.47.1
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  validate:
+    name: Validate release version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Match tag to pubspec
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf 'Invalid release tag: %s\n' "$RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          pubspec_version=""
+          while IFS=': ' read -r key value; do
+            if [[ "$key" == "version" ]]; then
+              pubspec_version="${value%%+*}"
+              break
+            fi
+          done < pubspec.yaml
+
+          if [[ "$RELEASE_TAG" != "v$pubspec_version" ]]; then
+            printf 'Tag %s does not match pubspec version %s\n' \
+              "$RELEASE_TAG" "$pubspec_version" >&2
+            exit 1
+          fi
+
+  web:
+    name: Package Web
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release --no-wasm-dry-run
+
+      - name: Package Web
+        shell: bash
+        run: |
+          mkdir -p dist
+          tar -C build/web -czf "dist/service-manager-${RELEASE_TAG}-web.tar.gz" .
+
+      - name: Upload Web files
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-web-files
+          path: build/web/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Web release asset
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-asset-web
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  desktop:
+    name: Package ${{ matrix.target }}
+    needs: [validate, web]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            artifact: release-asset-linux
+          - os: macos-latest
+            target: macos
+            artifact: release-asset-macos
+          - os: windows-latest
+            target: windows
+            artifact: release-asset-windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libgtk-3-dev libayatana-appindicator3-dev ninja-build
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Download Web files
+        uses: actions/download-artifact@v8
+        with:
+          name: release-web-files
+          path: build/web
+
+      - name: Build desktop application
+        run: flutter build ${{ matrix.target }} --release
+
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p dist
+          tar -C build/linux/x64/release/bundle \
+            -czf "dist/service-manager-${RELEASE_TAG}-linux-x64.tar.gz" .
+
+      - name: Package macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          app_path="build/macos/Build/Products/Release/Service Manager.app"
+          mkdir -p "$app_path/Contents/MacOS/web"
+          cp -R build/web/. "$app_path/Contents/MacOS/web/"
+          codesign --force --deep --sign - "$app_path"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" \
+            "dist/service-manager-${RELEASE_TAG}-macos.zip"
+
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bundle = "build\windows\x64\runner\Release"
+          $web = Join-Path $bundle "web"
+          New-Item -ItemType Directory -Path $web -Force | Out-Null
+          Copy-Item "build\web\*" $web -Recurse -Force
+          New-Item -ItemType Directory -Path "dist" -Force | Out-Null
+          Compress-Archive -Path "$bundle\*" -DestinationPath "dist\service-manager-$env:RELEASE_TAG-windows-x64.zip"
+
+      - name: Upload desktop release asset
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  headless:
+    name: Package Headless Linux
+    needs: [validate, web]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Download Web files
+        uses: actions/download-artifact@v8
+        with:
+          name: release-web-files
+          path: build/web
+
+      - name: Build Headless CLI
+        run: dart build cli --target=bin/service_manager.dart
+
+      - name: Package Headless CLI
+        shell: bash
+        run: |
+          cp -R build/web build/cli/linux_x64/bundle/web
+          mkdir -p dist
+          tar -C build/cli/linux_x64/bundle \
+            -czf "dist/service-manager-${RELEASE_TAG}-headless-linux-x64.tar.gz" .
+
+      - name: Upload Headless release asset
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-asset-headless-linux
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish:
+    name: Publish GitHub release
+    needs: [validate, web, desktop, headless]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-asset-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        shell: bash
+        working-directory: dist
+        run: sha256sum service-manager-* > SHA256SUMS
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$RELEASE_TAG" dist/* \
+            --generate-notes \
+            --notes "Desktop builds are unsigned. Verify downloads with SHA256SUMS. The Web archive contains frontend files only; desktop and Headless archives already include the Web UI." \
+            --target "$GITHUB_SHA" \
+            --title "Service Manager $RELEASE_TAG"

@@ -4,6 +4,19 @@ Service Manager runs foreground programs as user-level background services. It
 provides a desktop tray application for Linux, macOS, and Windows and a loopback-only
 Web interface for headless hosts.
 
+## Downloads
+
+GitHub Releases provide desktop archives for Linux, macOS, and Windows, a Linux
+Headless CLI bundle, and the standalone Web UI. Desktop and Headless archives
+already include the matching Web UI.
+
+The Web archive contains only frontend files and requires a Service Manager
+backend on the same origin. Use `SHA256SUMS` to verify downloaded assets.
+
+Desktop builds are currently unsigned. macOS Gatekeeper and Windows SmartScreen
+may require explicit approval before the first launch. Linux desktop builds
+require GTK 3 and an Ayatana AppIndicator runtime library.
+
 ## Headless Mode
 
 Build the Web application, then start the service manager:
