@@ -73,6 +73,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get name => '名称';
 
   @override
+  String get basicSettings => '基本配置';
+
+  @override
   String get executable => '可执行程序';
 
   @override
@@ -167,6 +170,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get behavior => '行为';
+
+  @override
+  String get advancedSettings => '高级设置';
+
+  @override
+  String get advancedSettingsDescription => '环境变量与自定义停止';
 
   @override
   String get logRetention => '日志保留';

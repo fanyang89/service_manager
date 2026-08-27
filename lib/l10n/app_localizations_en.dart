@@ -73,6 +73,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get name => 'Name';
 
   @override
+  String get basicSettings => 'Basic settings';
+
+  @override
   String get executable => 'Executable';
 
   @override
@@ -167,6 +170,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get behavior => 'Behavior';
+
+  @override
+  String get advancedSettings => 'Advanced settings';
+
+  @override
+  String get advancedSettingsDescription =>
+      'Environment and custom stop behavior';
 
   @override
   String get logRetention => 'Log retention';

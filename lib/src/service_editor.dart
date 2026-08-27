@@ -37,6 +37,7 @@ class _ServiceEditorState extends State<_ServiceEditor> {
   late final TextEditingController _timeout;
   late bool _startAutomatically;
   late bool _restartAutomatically;
+  late bool _advancedExpanded;
   String? _environmentError;
 
   @override
@@ -61,6 +62,12 @@ class _ServiceEditorState extends State<_ServiceEditor> {
     );
     _startAutomatically = service?.startAutomatically ?? false;
     _restartAutomatically = service?.restartAutomatically ?? false;
+    _advancedExpanded =
+        service != null &&
+        (service.environment.isNotEmpty ||
+            service.stopExecutable.isNotEmpty ||
+            service.stopArguments.isNotEmpty ||
+            service.stopTimeoutSeconds != 10);
   }
 
   @override
@@ -105,6 +112,7 @@ class _ServiceEditorState extends State<_ServiceEditor> {
       _environmentError = environment == null
           ? localizations.invalidEnvironment
           : null;
+      if (environment == null) _advancedExpanded = true;
     });
     if (!_formKey.currentState!.validate() || environment == null) return;
     final timeout = int.tryParse(_timeout.text)?.clamp(1, 300) ?? 10;
@@ -170,6 +178,8 @@ class _ServiceEditorState extends State<_ServiceEditor> {
                 child: ListView(
                   padding: const EdgeInsets.all(28),
                   children: [
+                    _SectionHeading(title: localizations.basicSettings),
+                    const SizedBox(height: 14),
                     TextFormField(
                       controller: _name,
                       decoration: InputDecoration(
@@ -207,61 +217,68 @@ class _ServiceEditorState extends State<_ServiceEditor> {
                       label: localizations.workingDirectory,
                       onBrowse: kIsWeb ? null : _pickDirectory,
                     ),
-                    const SizedBox(height: 18),
-                    TextFormField(
-                      controller: _environment,
-                      decoration: InputDecoration(
-                        labelText: localizations.environment,
-                        hintText: localizations.environmentHint,
-                        helperText: localizations.plainTextEnvironmentWarning,
-                        errorText: _environmentError,
-                        alignLabelWithHint: true,
-                      ),
-                      minLines: 2,
-                      maxLines: 5,
-                    ),
-                    const SizedBox(height: 18),
-                    _PathField(
-                      controller: _stopExecutable,
-                      label: localizations.stopExecutable,
-                      onBrowse: kIsWeb
-                          ? null
-                          : () => _pickExecutable(_stopExecutable),
-                    ),
-                    const SizedBox(height: 18),
-                    TextFormField(
-                      controller: _stopArguments,
-                      decoration: InputDecoration(
-                        labelText: localizations.stopArguments,
-                        hintText: localizations.argumentsHint,
-                        alignLabelWithHint: true,
-                      ),
-                      minLines: 2,
-                      maxLines: 4,
-                    ),
-                    const SizedBox(height: 18),
-                    TextFormField(
-                      controller: _timeout,
-                      decoration: InputDecoration(
-                        labelText: localizations.stopTimeout,
-                        suffixText: localizations.seconds,
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _startAutomatically,
-                      title: Text(localizations.startAutomatically),
-                      onChanged: (value) =>
+                    const SizedBox(height: 28),
+                    _SectionHeading(title: localizations.behavior),
+                    const SizedBox(height: 10),
+                    _BehaviorOptions(
+                      startAutomatically: _startAutomatically,
+                      restartAutomatically: _restartAutomatically,
+                      onStartAutomaticallyChanged: (value) =>
                           setState(() => _startAutomatically = value),
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _restartAutomatically,
-                      title: Text(localizations.restartAutomatically),
-                      onChanged: (value) =>
+                      onRestartAutomaticallyChanged: (value) =>
                           setState(() => _restartAutomatically = value),
+                    ),
+                    const SizedBox(height: 24),
+                    _AdvancedSection(
+                      expanded: _advancedExpanded,
+                      title: localizations.advancedSettings,
+                      description: localizations.advancedSettingsDescription,
+                      onToggle: () => setState(
+                        () => _advancedExpanded = !_advancedExpanded,
+                      ),
+                      children: [
+                        TextFormField(
+                          controller: _environment,
+                          decoration: InputDecoration(
+                            labelText: localizations.environment,
+                            hintText: localizations.environmentHint,
+                            helperText:
+                                localizations.plainTextEnvironmentWarning,
+                            errorText: _environmentError,
+                            alignLabelWithHint: true,
+                          ),
+                          minLines: 2,
+                          maxLines: 5,
+                        ),
+                        const SizedBox(height: 18),
+                        _PathField(
+                          controller: _stopExecutable,
+                          label: localizations.stopExecutable,
+                          onBrowse: kIsWeb
+                              ? null
+                              : () => _pickExecutable(_stopExecutable),
+                        ),
+                        const SizedBox(height: 18),
+                        TextFormField(
+                          controller: _stopArguments,
+                          decoration: InputDecoration(
+                            labelText: localizations.stopArguments,
+                            hintText: localizations.argumentsHint,
+                            alignLabelWithHint: true,
+                          ),
+                          minLines: 2,
+                          maxLines: 4,
+                        ),
+                        const SizedBox(height: 18),
+                        TextFormField(
+                          controller: _timeout,
+                          decoration: InputDecoration(
+                            labelText: localizations.stopTimeout,
+                            suffixText: localizations.seconds,
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -287,6 +304,108 @@ class _ServiceEditorState extends State<_ServiceEditor> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(title, style: Theme.of(context).textTheme.titleMedium);
+  }
+}
+
+class _BehaviorOptions extends StatelessWidget {
+  const _BehaviorOptions({
+    required this.startAutomatically,
+    required this.restartAutomatically,
+    required this.onStartAutomaticallyChanged,
+    required this.onRestartAutomaticallyChanged,
+  });
+
+  final bool startAutomatically;
+  final bool restartAutomatically;
+  final ValueChanged<bool> onStartAutomaticallyChanged;
+  final ValueChanged<bool> onRestartAutomaticallyChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          SwitchListTile(
+            value: startAutomatically,
+            title: Text(localizations.startAutomatically),
+            onChanged: onStartAutomaticallyChanged,
+          ),
+          Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: colors.outlineVariant,
+          ),
+          SwitchListTile(
+            value: restartAutomatically,
+            title: Text(localizations.restartAutomatically),
+            onChanged: onRestartAutomaticallyChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdvancedSection extends StatelessWidget {
+  const _AdvancedSection({
+    required this.expanded,
+    required this.title,
+    required this.description,
+    required this.onToggle,
+    required this.children,
+  });
+
+  final bool expanded;
+  final String title;
+  final String description;
+  final VoidCallback onToggle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          ListTile(
+            onTap: onToggle,
+            leading: const Icon(Icons.tune),
+            title: Text(title),
+            subtitle: Text(description),
+            trailing: Icon(expanded ? Icons.expand_less : Icons.expand_more),
+          ),
+          if (expanded) ...[
+            Divider(height: 1, color: colors.outlineVariant),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(children: children),
+            ),
+          ],
+        ],
       ),
     );
   }

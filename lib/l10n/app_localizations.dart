@@ -224,6 +224,12 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get name;
 
+  /// No description provided for @basicSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic settings'**
+  String get basicSettings;
+
   /// No description provided for @executable.
   ///
   /// In en, this message translates to:
@@ -415,6 +421,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Behavior'**
   String get behavior;
+
+  /// No description provided for @advancedSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced settings'**
+  String get advancedSettings;
+
+  /// No description provided for @advancedSettingsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Environment and custom stop behavior'**
+  String get advancedSettingsDescription;
 
   /// No description provided for @logRetention.
   ///

@@ -32,6 +32,27 @@ void main() {
 
     expect(find.text('No services yet'), findsOneWidget);
     expect(find.text('Add service'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Add service'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Basic settings'), findsOneWidget);
+    expect(find.text('Environment'), findsNothing);
+
+    final form = find.descendant(
+      of: find.byType(Form),
+      matching: find.byType(ListView),
+    );
+    await tester.drag(form, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    expect(find.text('Behavior'), findsOneWidget);
+    expect(find.text('Advanced settings'), findsOneWidget);
+
+    await tester.tap(find.text('Advanced settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Environment'), findsOneWidget);
+    expect(find.text('Stop executable'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }
