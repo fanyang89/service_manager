@@ -24,7 +24,7 @@ Future<void> bootstrap(List<String> arguments) async {
   launchAtStartup.setup(
     appName: 'Service Manager',
     appPath: Platform.resolvedExecutable,
-    packageName: 'com.example.serviceManager',
+    packageName: 'io.github.fanyang89.serviceManager',
     args: const ['--hidden'],
   );
 
@@ -98,7 +98,7 @@ Future<bool> _acquireSingleInstance() async {
     return FlutterAlone.instance.checkAndRun(
       config: FlutterAloneConfig.forWindows(
         windowsConfig: const DefaultWindowsMutexConfig(
-          packageId: 'com.example.serviceManager',
+          packageId: 'io.github.fanyang89.serviceManager',
           appName: 'Service Manager',
         ),
         duplicateCheckConfig: duplicateCheck,
