@@ -30,6 +30,10 @@ void main() {
     );
     await tester.pump();
 
+    final context = tester.element(find.text('No services yet'));
+    expect(Theme.of(context).textTheme.bodyMedium?.fontFamily, 'Noto Sans SC');
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.darkTheme?.textTheme.bodyMedium?.fontFamily, 'Noto Sans SC');
     expect(find.text('No services yet'), findsOneWidget);
     expect(find.text('Add service'), findsWidgets);
 

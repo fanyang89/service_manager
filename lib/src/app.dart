@@ -81,6 +81,7 @@ class ServiceManagerAppState extends State<ServiceManagerApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
+        fontFamily: 'Noto Sans SC',
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xff176b5b),
           brightness: Brightness.light,
@@ -93,6 +94,7 @@ class ServiceManagerAppState extends State<ServiceManagerApp> {
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
+        fontFamily: 'Noto Sans SC',
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xff6fc5af),
           brightness: Brightness.dark,
